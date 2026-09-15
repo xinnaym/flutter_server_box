@@ -5,6 +5,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -53,3 +56,20 @@ jobs:
           name: flutter_server_box-windows
           path: ${{ steps.find_output.outputs.out_dir }}
           if-no-files-found: error
+
+      - name: Zip build output
+        shell: bash
+        run: |
+          cd "${{ steps.find_output.outputs.out_dir }}"
+          7z a -tzip "$GITHUB_WORKSPACE/flutter_server_box-windows.zip" ./*
+
+      - name: Create/Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.run_number) }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || format('Windows build #{0}', github.run_number) }}
+          files: flutter_server_box-windows.zip
+          draft: false
+          prerelease: ${{ github.ref_type != 'tag' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
