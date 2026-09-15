@@ -1,0 +1,50 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install deps (Dart/Flutter + Rust crates via make deps)
+        run: make deps
+        shell: bash
+
+      - name: Build Windows release
+        run: dart run fl_build -p windows
+
+      - name: Locate build output
+        id: find_output
+        shell: bash
+        run: |
+          OUT_DIR=$(find build/windows -type d -iname "Release" | head -n 1)
+          echo "out_dir=$OUT_DIR" >> "$GITHUB_OUTPUT"
+          echo "Found build output at: $OUT_DIR"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter_server_box-windows
+          path: ${{ steps.find_output.outputs.out_dir }}
+          if-no-files-found: error
