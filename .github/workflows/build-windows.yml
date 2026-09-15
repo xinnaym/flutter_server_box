@@ -38,9 +38,14 @@ jobs:
         id: find_output
         shell: bash
         run: |
-          OUT_DIR=$(find build/windows -type d -iname "Release" | head -n 1)
+          OUT_DIR=$(find build/windows -type d -path "*runner/Release" | head -n 1)
+          if [ -z "$OUT_DIR" ]; then
+            echo "runner/Release not found, falling back to any Release dir with an .exe inside"
+            OUT_DIR=$(find build/windows -type f -iname "*.exe" -path "*Release*" -exec dirname {} \; | head -n 1)
+          fi
           echo "out_dir=$OUT_DIR" >> "$GITHUB_OUTPUT"
           echo "Found build output at: $OUT_DIR"
+          ls -la "$OUT_DIR" || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
